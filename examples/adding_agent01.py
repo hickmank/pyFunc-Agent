@@ -1,27 +1,41 @@
 """An agent that can call an addition function."""
 
 import sys
+from typing import TypedDict, Sequence
 
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
-#from langgraph.prebuilt import ToolExecutor
-from langgraph.prebuilt import ToolInvocation
+from langgraph.graph.message import add_messages
+from langchain_core.messages import HumanMessage
+from langchain_core.messages import BaseMessage
 from langchain_core.runnables import RunnableLambda
-from langchain_community.chat_models import ChatOllama
+from langchain_core.tools import tool
+from langchain_ollama import ChatOllama
 
 from pyfunc_agent.tools import add_numbers
 
 
+# --- Define Agent State ---
+class AgentState(TypedDict):
+    """Schema for LangGraph agent state."""
+    messages: list[BaseMessage]
+
+
+# --- Validate Message ---
+def validate_messages(messages: Sequence[BaseMessage]) -> None:
+    """Message type validator for testing."""
+    for i, msg in enumerate(messages):
+        if not isinstance(msg, BaseMessage):
+            print(f"Message {i} is not a BaseMessage: {msg}")
+        else:
+            print(f"Message {i} is a {msg.__class__.__name__}")
+
+
 # --- TOOL WRAPPER ---
-def tool_add_numbers(inputs) -> dict:
+@tool
+def add_tool(a: float, b: float) -> dict:
     """The tool wrapper for the agent."""
-    a = float(inputs.get("a", 0))
-    b = float(inputs.get("b", 0))
-
-    return {"result": add_numbers(a, b)}
-
-
-tool_executor = ToolNode([tool_add_numbers])
+    return add_numbers(a, b)
 
 
 # --- LLM SETUP ---
@@ -30,42 +44,35 @@ llm = ChatOllama(
     temperature=0.1,
 )
 
+
 # --- AGENT NODE ---
-def agent_node(state) -> dict:
+def agent_node(state: AgentState) -> AgentState:
+    """Message passer for LLM."""
     messages = state["messages"]
+
+    validate_messages(messages)
+
     response = llm.invoke(messages)
 
-    tool_calls = getattr(response, "tool_calls", [])
-    if tool_calls:
-        invocations = [
-            ToolInvocation(tool=call.name, input=call.args) for call in tool_calls
-            ]
-        return {
-            "messages": messages + [response], 
-            "invocations": invocations,
-            }
+    return add_messages(state, [response])
 
-    return {"messages": messages + [response]}
-
-
-# --- TOOL NODE ---
-def tool_node(state) -> dict:
-    invocations = state.get("invocations", [])
-    tool_outputs = tool_executor.invoke(invocations)
-
-    return {"messages": state["messages"] + [tool_outputs]}
-
+# Use the ToolNode to handle tool calls dynamically
+tool_node = ToolNode([add_tool])
 
 # --- LANGGRAPH WORKFLOW ---
-graph = StateGraph()
-graph.add_node("agent", RunnableLambda(agent_node))
-graph.add_node("tools", RunnableLambda(tool_node))
+builder = StateGraph(AgentState)
 
-graph.set_entry_point("agent")
-graph.add_edge("agent", "tools")
-graph.add_edge("tools", END)
+# Add nodes
+builder.add_node("agent", RunnableLambda(agent_node))
+builder.add_node("tools", tool_node)
 
-runnable = graph.compile()
+# Add edges
+builder.set_entry_point("agent")
+builder.add_edge("agent", "tools")
+builder.add_edge("tools", END)
+
+# Compile the graph
+graph = builder.compile()
 
 
 # --- CLI HANDLER ---
@@ -77,11 +84,14 @@ if __name__ == "__main__":
 
     user_input = " ".join(sys.argv[1:])
     input_state = {
-        "messages": [
-            {"role": "user", "content": user_input}
-        ]
+        "messages": [HumanMessage(content=user_input)]
     }
 
-    result = runnable.invoke(input_state)
+    result = graph.invoke(input_state)
+
     print("Final Output:")
     print(result["messages"][-1])
+
+    print("============ Message Chain ==========")
+    for msg in result["messages"]:
+        print(msg)
