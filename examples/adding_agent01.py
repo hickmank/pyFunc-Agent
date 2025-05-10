@@ -3,7 +3,7 @@
 import sys
 from typing import TypedDict, Sequence
 
-from langgraph.graph import StateGraph, END
+from langgraph.graph import StateGraph, MessagesState, END
 from langgraph.prebuilt import ToolNode
 from langgraph.graph.message import add_messages
 from langchain_core.messages import HumanMessage
@@ -15,25 +15,9 @@ from langchain_ollama import ChatOllama
 from pyfunc_agent.tools import add_numbers
 
 
-# --- Define Agent State ---
-class AgentState(TypedDict):
-    """Schema for LangGraph agent state."""
-    messages: list[BaseMessage]
-
-
-# --- Validate Message ---
-def validate_messages(messages: Sequence[BaseMessage]) -> None:
-    """Message type validator for testing."""
-    for i, msg in enumerate(messages):
-        if not isinstance(msg, BaseMessage):
-            print(f"Message {i} is not a BaseMessage: {msg}")
-        else:
-            print(f"Message {i} is a {msg.__class__.__name__}")
-
-
 # --- TOOL WRAPPER ---
 @tool
-def add_tool(a: float, b: float) -> dict:
+def add_tool(a: float, b: float) -> str:
     """The tool wrapper for the agent."""
     return add_numbers(a, b)
 
@@ -46,21 +30,21 @@ llm = ChatOllama(
 
 
 # --- AGENT NODE ---
-def agent_node(state: AgentState) -> AgentState:
+def agent_node(state):
     """Message passer for LLM."""
     messages = state["messages"]
 
-    validate_messages(messages)
-
     response = llm.invoke(messages)
 
-    return add_messages(state, [response])
+    return {"messages": messages + [response]}
+    #return add_messages(state, [response])
+
 
 # Use the ToolNode to handle tool calls dynamically
 tool_node = ToolNode([add_tool])
 
 # --- LANGGRAPH WORKFLOW ---
-builder = StateGraph(AgentState)
+builder = StateGraph(MessagesState)
 
 # Add nodes
 builder.add_node("agent", RunnableLambda(agent_node))
@@ -83,6 +67,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     user_input = " ".join(sys.argv[1:])
+
     input_state = {
         "messages": [HumanMessage(content=user_input)]
     }
