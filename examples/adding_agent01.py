@@ -1,13 +1,10 @@
 """An agent that can call an addition function."""
 
 import sys
-from typing import TypedDict, Sequence
 
 from langgraph.graph import StateGraph, MessagesState, END
 from langgraph.prebuilt import ToolNode
-from langgraph.graph.message import add_messages
 from langchain_core.messages import HumanMessage
-from langchain_core.messages import BaseMessage
 from langchain_core.runnables import RunnableLambda
 from langchain_core.tools import tool
 from langchain_ollama import ChatOllama
@@ -19,6 +16,7 @@ from pyfunc_agent.tools import add_numbers
 @tool
 def add_tool(a: float, b: float) -> str:
     """The tool wrapper for the agent."""
+    print(f"[add_tool] called with a={a}, b={b}.")
     return add_numbers(a, b)
 
 
@@ -37,7 +35,6 @@ def agent_node(state):
     response = llm.invoke(messages)
 
     return {"messages": messages + [response]}
-    #return add_messages(state, [response])
 
 
 # Use the ToolNode to handle tool calls dynamically
@@ -73,6 +70,10 @@ if __name__ == "__main__":
     }
 
     result = graph.invoke(input_state)
+
+    print("RESULT:")
+    print(result)
+    print("=====================================")
 
     print("Final Output:")
     print(result["messages"][-1])
