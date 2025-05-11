@@ -1,18 +1,24 @@
 """An agent that can call an addition function."""
 
 import sys
+from typing import TypedDict
 
 from langgraph.graph import StateGraph, MessagesState
 from langgraph.graph import START
 #from langgraph.graph import END
 from langgraph.prebuilt import ToolNode, tools_condition
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import BaseMessage, HumanMessage
 #from langchain_core.messages import SystemMessage
 from langchain_core.runnables import RunnableLambda
 from langchain_core.tools import tool
 from langchain_ollama import ChatOllama
 
 from pyfunc_agent.tools import add_numbers
+
+
+class AgentState(TypedDict):
+    """Type for agent message."""
+    messages: list[BaseMessage]
 
 
 # --- TOOL WRAPPER ---
@@ -36,7 +42,7 @@ llm = llm.bind_tools([add_tool])
 
 
 # --- AGENT NODE ---
-def agent_node(state: dict) -> dict:
+def agent_node(state: AgentState) -> AgentState:
     """Message passer for LLM."""
     messages = state["messages"]
 
