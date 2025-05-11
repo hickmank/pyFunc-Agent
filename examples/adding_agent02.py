@@ -1,4 +1,4 @@
-"""An agent that can call an addition function."""
+"""An agent that can call multiple python functions."""
 
 import sys
 
@@ -12,16 +12,45 @@ from langchain_core.runnables import RunnableLambda
 from langchain_core.tools import tool
 from langchain_ollama import ChatOllama
 
-from pyfunc_agent.tools import add_numbers
+from pyfunc_agent.tools import add_numbers, square_root
+from pyfunc_agent.tools import exponential, ln, multiply_numbers
 from pyfunc_agent.agent_attributes import AgentState
 
 
-# --- TOOL WRAPPER ---
+# --- TOOL WRAPPERS ---
 @tool
-def add_tool(a: float, b: float) -> str:
-    """The tool wrapper for the agent."""
+def add_tool(a: float, b: float) -> float:
+    """The addition tool wrapper for the agent."""
     print(f"[add_tool] called with a={a}, b={b}.")
     return add_numbers(a, b)
+
+
+@tool
+def multiply_tool(a: float, b: float) -> float:
+    """The multiplication tool wrapper for the agent."""
+    print(f"[multiply_tool] called with a={a}, b={b}.")
+    return multiply_numbers(a, b)
+
+
+@tool
+def sqrt_tool(a: float) -> float:
+    """The square root calculation tool for the agent."""
+    print(f"[sqrt_tool] called with a={a}.")
+    return square_root(a)
+
+
+@tool
+def exp_tool(a: float) -> float:
+    """The tool wrapper for the agent."""
+    print(f"[exp_tool] called with a={a}.")
+    return exponential(a)
+
+
+@tool
+def ln_tool(a: float) -> float:
+    """The tool wrapper for the agent."""
+    print(f"[ln_tool] called with a={a}.")
+    return ln(a)
 
 
 # --- LLM SETUP ---
@@ -33,7 +62,15 @@ llm = ChatOllama(
 )
 
 # Bind tool
-llm = llm.bind_tools([add_tool])
+llm = llm.bind_tools(
+    [
+        add_tool,
+        multiply_tool,
+        sqrt_tool,
+        exp_tool,
+        ln_tool
+    ]
+)
 
 
 # --- AGENT NODE ---
@@ -83,20 +120,24 @@ if __name__ == "__main__":
 
     # Set up a system prompt to make LLM aware of tool and format it's responses
     # accordingly
-    # system = SystemMessage(
-    #     content=(
-    #         "You are an agent with access to a single tool:\n"
-    #         "- add_tool(a: float, b: float) -> returns sum of a and b\n"
-    #         "Whenever you are asked to add two numbers, you MUST call add_tool.\n"
-    #         "**DO NOT COMPUTE THE SUM YOURSELF**\n"
-    #         "\nFormat your response **exactly** as a JSON function-call, e.g.:\n"
-    #         "{'name': 'add_tool', 'arguments': {'a': float, 'b': float}}"
-    #     )
-    # )
+    system = SystemMessage(
+        content=(
+            "You are an eccentric mathematician agent with "
+            "access to a few simple math tools:\n"
+            "- add_tool(a: float, b: float) -> returns sum of a and b\n"
+            "- multiply_tool(a: float, b: float) -> returns multiplication of a and b\n"
+            "- exp_tool(a: float) -> returns natural exponentiation of a\n"
+            "- sqrt_tool(a: float) -> returns square root of a\n"
+            "- ln_tool(a: float) -> returns natural log of a\n"
+            "Whenever you are asked a question use your tools to answer the question "
+            "if the tools are at all relevant. You love using your tools!\n"
+            "Form your response with a lot of whimsy."
+        )
+    )
 
     input_state = {
         "messages": [
-            #system,
+            system,
             HumanMessage(content=user_input)
             ]
     }
