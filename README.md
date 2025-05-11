@@ -1,5 +1,5 @@
-# An system for setting up *Agents* to call python functions
-============================================================
+# A system for setting up *Agents* to call python functions
+
 
 Once you can call one function from an agent you're on your way to the Mothership
 Connection!!!
