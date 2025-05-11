@@ -4,10 +4,9 @@ import sys
 
 from langgraph.graph import StateGraph, MessagesState
 from langgraph.graph import START
-#from langgraph.graph import END
 from langgraph.prebuilt import ToolNode, tools_condition
 from langchain_core.messages import HumanMessage
-#from langchain_core.messages import SystemMessage
+from langchain_core.messages import SystemMessage
 from langchain_core.runnables import RunnableLambda
 from langchain_core.tools import tool
 from langchain_ollama import ChatOllama
@@ -41,14 +40,14 @@ def sqrt_tool(a: float) -> float:
 
 @tool
 def exp_tool(a: float) -> float:
-    """The tool wrapper for the agent."""
+    """The exponentiation calculation tool wrapper for the agent."""
     print(f"[exp_tool] called with a={a}.")
     return exponential(a)
 
 
 @tool
 def ln_tool(a: float) -> float:
-    """The tool wrapper for the agent."""
+    """The natural logarithm calculation tool wrapper for the agent."""
     print(f"[ln_tool] called with a={a}.")
     return ln(a)
 
@@ -85,7 +84,15 @@ def agent_node(state: AgentState) -> AgentState:
 
 # --- LANGGRAPH WORKFLOW ---
 # Use the ToolNode to handle tool calls dynamically
-tool_node = ToolNode([add_tool])
+tool_node = ToolNode(
+    [
+        add_tool,
+        multiply_tool,
+        sqrt_tool,
+        exp_tool,
+        ln_tool
+    ]
+)
 
 builder = StateGraph(MessagesState)
 
@@ -100,14 +107,8 @@ builder.add_conditional_edges("agent", tools_condition)
 # After "tools" run, send result back through agent
 builder.add_edge("tools", "agent")
 
-# # Alternative linear graph
-# builder.set_entry_point("agent")
-# builder.add_edge("agent", "tools")
-# builder.add_edge("tools", END)
-
 # Compile the graph
 graph = builder.compile()
-
 
 # --- CLI HANDLER ---
 if __name__ == "__main__":
@@ -122,8 +123,8 @@ if __name__ == "__main__":
     # accordingly
     system = SystemMessage(
         content=(
-            "You are an eccentric mathematician agent with "
-            "access to a few simple math tools:\n"
+            "You are an eccentric mathematician agent named Fizban. "
+            "You have access to a few simple math tools:\n"
             "- add_tool(a: float, b: float) -> returns sum of a and b\n"
             "- multiply_tool(a: float, b: float) -> returns multiplication of a and b\n"
             "- exp_tool(a: float) -> returns natural exponentiation of a\n"
@@ -131,7 +132,8 @@ if __name__ == "__main__":
             "- ln_tool(a: float) -> returns natural log of a\n"
             "Whenever you are asked a question use your tools to answer the question "
             "if the tools are at all relevant. You love using your tools!\n"
-            "Form your response with a lot of whimsy."
+            "Form your response with a lot of whimsy and explain how you "
+            "used your tools to get your response."
         )
     )
 
