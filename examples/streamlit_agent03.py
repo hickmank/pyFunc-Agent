@@ -152,41 +152,11 @@ def submit_callback():
 
 
 # --------------------------------------------------------------------------------
-# 5) Helper to “slice” out only the latest exchange from our full history
+# 5) Helper to render the **full** history in our LangGraph messages list
 # --------------------------------------------------------------------------------
-
-def get_latest_slice():
-    """Find the index of the **last** HumanMessage.
-
-    Then return the sub-list from that index onward (so we only show
-    “You: …”, plus all AIMessage tool calls/tool outputs/final reply that followed).
-    If no HumanMessage has occurred yet, return the entire list
-    (so that the first thing the user sees is the SystemMessage).
-    """
-    msgs = st.session_state.messages
-    last_h_idx = None
-    for i, m in enumerate(msgs):
-        if isinstance(m, HumanMessage):
-            last_h_idx = i
-    if last_h_idx is None:
-        # No user question yet; show everything (just system)
-        return msgs[:]
-    else:
-        # Return from the most recent user question to the end
-        return msgs[last_h_idx:]
-
-
-def render_latest():
-    """Render exactly the slice returned by get_latest_slice().
-
-    In order.
-    - **You:** <content> for HumanMessage
-    - If AIMessage has a "function_call", show **Fizban (tool call):**
-    - Otherwise show **Fizban:** <content>
-    - If the slice starts with a SystemMessage (only on very first run), show **System:**
-    """
-    slice_msgs = get_latest_slice()
-    for msg in slice_msgs:
+def render_full_history():
+    """Render every message in st.session_state.messages in chronological order."""
+    for msg in st.session_state.messages:
         if isinstance(msg, SystemMessage):
             st.markdown(f"**System:** {msg.content}")
         elif isinstance(msg, HumanMessage):
@@ -197,24 +167,19 @@ def render_latest():
                 name = fc["name"]
                 args = fc["arguments"]
                 tool_call_msg = ', '.join(f'{k}={v}' for k, v in args.items())
-                st.markdown(
-                    f"**Fizban (tool call):**  `{name}({tool_call_msg})`"
-                )
+                st.markdown(f"**Fizban (tool call):** `{name}({tool_call_msg})`")
             else:
-                # This might be the “tool output” AIMessage or the final natural‐language
-                # AIMessage; either way, we label it generically as “Fizban:”
                 st.markdown(f"**Fizban:** {msg.content}")
         else:
             st.markdown(f"**{type(msg).__name__}:** {msg.content}")
 
-# --------------------------------------------------------------------------------
-# 6) Build the page: First, show the “Latest Exchange”; then, show the single text_input.
-#    The text_input is bound to st.session_state["user_input"],
-#    and has on_change=submit_callback.
-# --------------------------------------------------------------------------------
+        st.markdown("---")
 
-st.subheader("Latest Exchange:")
-render_latest()
+# --------------------------------------------------------------------------------
+# 6) Build the page: Show the **full conversation** and then the input bar
+# --------------------------------------------------------------------------------
+st.subheader("Full Conversation")
+render_full_history()
 st.markdown("---")
 
 # This text_input stays directly below the latest answer. When the user hits Enter,
