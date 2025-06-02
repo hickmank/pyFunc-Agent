@@ -21,7 +21,7 @@ from pyfunc_agent.tools import (
 )
 
 from pyfunc_agent.agent_attributes import AgentState
-from pyfunc_agent.utils import load_prompt
+from pyfunc_agent.utils import load_prompt_yaml
 
 # ------------------------------------------------------------------------------
 #  TOOL WRAPPERS (must be at module level so @tool can register them)
@@ -69,7 +69,7 @@ class MultiToolMathAgent:
 
     def __init__(
             self,
-            prompt_name: str = "fizban.json",
+            prompt_name: str = "fizban.yaml",
             model_name: str = "mix_77/gemma3-qat-tools:12b"
         ) -> None:
         """Initialize tools, LLM, LangGraph workflow, and message history."""
@@ -106,7 +106,7 @@ class MultiToolMathAgent:
         self.graph = builder.compile()
 
         # 2.3) Initialize the message history with a SystemMessage
-        system_text = load_prompt(prompt_name)
+        system_text = load_prompt_yaml(prompt_name)
         system_prompt = SystemMessage(content=system_text)
 
         self.messages: list[HumanMessage | SystemMessage | AIMessage] = [

@@ -16,6 +16,7 @@ dependencies = [
     "langchain",
     "langgraph",
     "langchain_ollama",
+    "pyyaml",
     "streamlit",
     "ruff",
     "sphinx",
@@ -35,7 +36,7 @@ Source = "https://github.com/hickmank/pyFunc-Agent"
 
 # This section instructs Flit to include *.json under prompts/ automatically.
 [tool.flit.include]
-"src/pyfunc_agent/prompts/*.json" = "prompts/"
+"src/pyfunc_agent/prompts/*.yaml" = "prompts/"
 
 [tool.ruff]
 line-length = 89

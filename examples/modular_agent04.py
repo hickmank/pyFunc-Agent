@@ -16,7 +16,7 @@ st.title("Modularized Agent")
 # 1.1) Instantiate the agent once (cached in session_state)
 if "agent" not in st.session_state:
     st.session_state.agent = MultiToolMathAgent(
-        prompt_name="calc_bot.json",
+        prompt_name="calc_bot.yaml",
         model_name="mix_77/gemma3-qat-tools:12b",
     )
 
