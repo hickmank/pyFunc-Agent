@@ -33,6 +33,10 @@ classifiers = ["Private :: Do Not Upload",
 [project.urls]
 Source = "https://github.com/hickmank/pyFunc-Agent"
 
+# This section instructs Flit to include *.json under prompts/ automatically.
+[tool.flit.include]
+"src/pyfunc_agent/prompts/*.json" = "prompts/"
+
 [tool.ruff]
 line-length = 89
 indent-width = 4
